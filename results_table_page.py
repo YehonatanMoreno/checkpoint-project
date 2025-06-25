@@ -1,24 +1,18 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
-import random
 
-# Tooltip helper class
 class ToolTip:
     def __init__(self, widget):
         self.widget = widget
         self.tipwindow = None
 
-    def showtip(self, text):
+    def showtip(self, text, x, y):
         self.hidetip()
         if not text:
             return
-        x, y, _, _ = self.widget.bbox("insert")
-        x += self.widget.winfo_rootx() + 20
-        y += self.widget.winfo_rooty() + 20
         self.tipwindow = tw = tk.Toplevel(self.widget)
         tw.wm_overrideredirect(True)
-        tw.wm_geometry(f"+{x}+{y}")
+        tw.wm_geometry(f"+{x+20}+{y+20}")
         label = tk.Label(
             tw, text=text, justify='left',
             background="#ffffe0", relief='solid', borderwidth=1,
@@ -31,6 +25,8 @@ class ToolTip:
             self.tipwindow.destroy()
             self.tipwindow = None
 
+
+# --- Main Class ---
 class SearchResultsTablePage:
     def __init__(self, master, parent_result_text, table_data):
         self.top = tk.Toplevel(master)
@@ -92,7 +88,6 @@ class SearchResultsTablePage:
         self.tree.bind("<Motion>", self._on_tree_hover)
         self.last_row_col = (None, None)
 
-        # Center the new window
         self.top.update_idletasks()
         x = master.winfo_x() + (master.winfo_width() // 2) - (self.top.winfo_width() // 2)
         y = master.winfo_y() + (master.winfo_height() // 2) - (self.top.winfo_height() // 2)
@@ -111,13 +106,14 @@ class SearchResultsTablePage:
             return
 
         if (row_id, col_id) == self.last_row_col:
-            return  # Don't update tooltip if still over same cell
+            return  # Already showing this cell's tooltip
 
         self.last_row_col = (row_id, col_id)
 
         values = self.tree.item(row_id, "values")
         if col_index < len(values):
-            self.tooltip.showtip(str(values[col_index]))
+            cell_text = str(values[col_index])
+            self.tooltip.showtip(cell_text, event.x_root, event.y_root)
         else:
             self.tooltip.hidetip()
 
