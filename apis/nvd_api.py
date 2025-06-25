@@ -1,25 +1,11 @@
+import logging
 from typing import List
-from functools import reduce
-from pydantic import BaseModel
 
 from apis.api_template import APITemplate
-from apis.github_api import GITHUB_API, Repository
+from classes.cve import CVE
 
 
-class CVE(BaseModel):
-    cve_id: str
-    severity: float
-    description: str
-    relevant_repositories_urls: List[str] = []
-    relevant_repositories_list: List[Repository] = []
-    relevant_repositories: str = ""
-    
-    def set_relevant_repositories(self) -> None:
-        if len(self.relevant_repositories) > 0:
-            self.relevant_repositories_list = [GITHUB_API.get_repository_details(url) for url in self.relevant_repositories_urls]
-            self.relevant_repositories_list.sort()
-            repositories_details = [str(repo) for repo in self.relevant_repositories]
-            self.relevant_repositories_string = reduce(lambda a, b: a + b + '\n', repositories_details)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class NVD_API(APITemplate):
@@ -27,6 +13,7 @@ class NVD_API(APITemplate):
 
     @classmethod
     def get_CPEs_by_keyword(cls, keyword: str) -> List[str]:
+        logging.info(f"Requesting NVD for CPEs by the keyword: {keyword}")
         cpes_list = []
         products = super().get(f'cpes/2.0/?keywordSearch={keyword}').json()["products"]
         for product in products:
@@ -37,6 +24,7 @@ class NVD_API(APITemplate):
     
     @classmethod
     def get_vulnerability_by_cpe_and_severity(cls, cpe_name: str, min_severity: float = 0) -> List[CVE]:
+        logging.info(f"Requesting NVD for CVEs by the CPE: {cpe_name} and with min severity of: {min_severity}")
         CVEs_list: List[CVE] = []
         vulnerabilities = super().get(f'cves/2.0?cpeName={cpe_name}').json()["vulnerabilities"]
         for vulnerability in vulnerabilities:
@@ -51,13 +39,21 @@ class NVD_API(APITemplate):
         cve_metrics = cve_details["metrics"]
         cve_version = "cvssMetricV31" if "cvssMetricV31" in cve_metrics else "cvssMetricV2" # use older version if I have to
         cve_details_to_return["severity"] = cve_details["metrics"][cve_version][0]["cvssData"]["baseScore"]
-        cve_details_to_return["description"] = list(filter(lambda x: x["lang"] == "en", cve_details["descriptions"]))[0]["value"]
+        whole_description = list(filter(lambda x: x["lang"] == "en", cve_details["descriptions"]))[0]["value"]
+        cve_details_to_return["description"] = cls.__extract_first_sentence_from_description(whole_description)
         cve_details_to_return["relevant_repositories_urls"] = cls.__extract_exploit_github_references_urls(cve_details["references"])
         return cve_details_to_return
     
     @classmethod
+    def __extract_first_sentence_from_description(cls, description: str) -> str:
+        for i in range(1, len(description) - 1):
+            if description[i] == "." and not description[i - 1].isnumeric():
+                return description[:i + 1]
+        return ""
+    
+    @classmethod
     def __extract_exploit_github_references_urls(cls, references: List[dict]) -> List[str]:
-        return [cls.__slice_github_url(reference["url"]) for reference in references if "github" in reference["url"] and "tags" in reference and "Exploit" in reference["tags"]]
+        return list(set([cls.__slice_github_url(reference["url"]) for reference in references if "github" in reference["url"] and "tags" in reference and "Exploit" in reference["tags"]]))
 
     @classmethod
     def __slice_github_url(cls, url: str) -> str: # so it contains the endpoint until the repo name without additionals

@@ -1,32 +1,16 @@
-from typing import List
-from pydantic import BaseModel
+import logging
 
 from apis.api_template import APITemplate
+from classes.repository import Repository
 
 
-class Repository(BaseModel):
-    name: str
-    stars: int
-    forks: int
-    
-    def __init__(self, name, stars, forks) -> None:
-        self.name = name
-        self.stars = stars
-        self.forks = forks
-        
-    def __str__(self) -> str:
-        return f"-{self.name} (stars: {self.stars}, forks: {self.forks})"
-    
-    def __lt__(self, other: "Repository") -> bool:
-        if self.stars < other.stars:
-            return True
-        if self.stars == other.stars:
-            return self.forks < other.forks
-        return False
+logging.basicConfig(level=logging.DEBUG)
+
 class GITHUB_API(APITemplate):
     BASE_URL = "https://api.github.com"
     
     @classmethod
     def get_repository_details(cls, repo_url: str) -> Repository:
+        logging.info(f"Requesting github for repo details: {repo_url}")
         repo_details = super().get(repo_url).json()
-        return Repository(repo_url.split('/')[-1], repo_details["stargazers_count"], repo_details["forks"])
+        return Repository(name=repo_url.split('/')[-1], stars=repo_details["stargazers_count"], forks=repo_details["forks"])

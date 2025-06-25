@@ -3,7 +3,7 @@ from tkinter import ttk
 from tkinter import messagebox
 
 from apis.nvd_api import NVD_API
-from CPEs_page import SearchResultsPage
+from cpe_list_page import SearchResultsPage
 
 class MyApp:
     def __init__(self, master):

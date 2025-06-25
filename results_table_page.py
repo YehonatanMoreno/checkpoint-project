@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
+import textwrap
 
 class ToolTip:
     def __init__(self, widget):
@@ -25,10 +27,10 @@ class ToolTip:
             self.tipwindow.destroy()
             self.tipwindow = None
 
-
-# --- Main Class ---
 class SearchResultsTablePage:
     def __init__(self, master, parent_result_text, table_data):
+        DESCRIPTION_CHAR_LENGTH: int = 50 
+        
         self.top = tk.Toplevel(master)
         self.top.title(f"Details for: {parent_result_text}")
         self.top.geometry("900x450")
@@ -49,7 +51,10 @@ class SearchResultsTablePage:
         tree_frame.grid_rowconfigure(0, weight=1)
         tree_frame.grid_columnconfigure(0, weight=1)
 
-        self.tree = ttk.Treeview(tree_frame, show="headings")
+        style = ttk.Style()
+        style.configure("Treeview", rowheight=120) 
+
+        self.tree = ttk.Treeview(tree_frame, show="headings", style="Treeview")
         columns_ids = ("CVE_ID", "Severity", "Description", "Relevant_Repositories") 
         self.tree["columns"] = columns_ids
 
@@ -58,14 +63,28 @@ class SearchResultsTablePage:
         self.tree.heading("Description", text="Description", anchor=tk.W)
         self.tree.heading("Relevant_Repositories", text="Relevant Repositories", anchor=tk.W)
 
-        self.tree.column("CVE_ID", width=120, minwidth=100, stretch=tk.NO)
-        self.tree.column("Severity", width=80, minwidth=70, stretch=tk.NO, anchor=tk.CENTER)
-        self.tree.column("Description", width=400, minwidth=300, stretch=tk.YES)
-        self.tree.column("Relevant_Repositories", width=400, minwidth=350, stretch=tk.YES)
+        temp_label_cve_id = ttk.Label(self.top, text="CVE ID")
+        self.tree.column("CVE_ID", width=temp_label_cve_id.winfo_reqwidth() + 20, minwidth=100, stretch=tk.NO)
+        temp_label_cve_id.destroy()
+
+        temp_label_severity = ttk.Label(self.top, text="Severity")
+        self.tree.column("Severity", width=temp_label_severity.winfo_reqwidth() + 20, minwidth=70, stretch=tk.NO, anchor=tk.CENTER)
+        temp_label_severity.destroy()
+
+
+        temp_label_description = ttk.Label(self.top, text="Description")
+        self.tree.column("Description", width=temp_label_description.winfo_reqwidth() + 300, minwidth=300, stretch=tk.YES)
+        temp_label_description.destroy()
+        
+        temp_label_repos = ttk.Label(self.top, text="Relevant Repositories")
+        self.tree.column("Relevant_Repositories", width=temp_label_repos.winfo_reqwidth() + 300, minwidth=350, stretch=tk.YES)
+        temp_label_repos.destroy()
 
         if table_data:
             for row_data in table_data:
                 values = [row_data.get(column_id.lower(), "N/A") for column_id in columns_ids]
+                values[2] = textwrap.fill(values[2], width=DESCRIPTION_CHAR_LENGTH) # pack description text
+
                 self.tree.insert("", tk.END, values=values)
         else:
             self.tree.insert("", tk.END, values=("", "", "No detailed results available.", ""))
@@ -83,7 +102,6 @@ class SearchResultsTablePage:
         close_button = ttk.Button(self.top, text="Close Table", command=self._on_closing)
         close_button.grid(row=2, column=0, pady=10)
 
-        # Tooltip integration
         self.tooltip = ToolTip(self.tree)
         self.tree.bind("<Motion>", self._on_tree_hover)
         self.last_row_col = (None, None)
@@ -98,7 +116,14 @@ class SearchResultsTablePage:
     def _on_tree_hover(self, event):
         row_id = self.tree.identify_row(event.y)
         col_id = self.tree.identify_column(event.x)
-        col_index = int(col_id.replace("#", "")) - 1 if col_id else None
+        
+        if col_id and col_id.startswith("#"):
+            try:
+                col_index = self.tree["columns"].index(self.tree.column(col_id, option="id"))
+            except ValueError:
+                col_index = None
+        else:
+            col_index = None
 
         if not row_id or col_index is None:
             self.tooltip.hidetip()
@@ -106,7 +131,7 @@ class SearchResultsTablePage:
             return
 
         if (row_id, col_id) == self.last_row_col:
-            return  # Already showing this cell's tooltip
+            return
 
         self.last_row_col = (row_id, col_id)
 
@@ -118,5 +143,6 @@ class SearchResultsTablePage:
             self.tooltip.hidetip()
 
     def _on_closing(self):
-        self.top.grab_release()
         self.top.destroy()
+        self.tooltip.hidetip()
+        self.top.grab_release()
