@@ -1,0 +1,46 @@
+from apis.api_template import APITemplate
+
+
+class NVD_API(APITemplate):
+    BASE_URL = "https://services.nvd.nist.gov/rest/json"
+
+    
+    @classmethod
+    def get_CPEs_by_keyword(cls, keyword: str) -> list[str]:
+        cpes_list = []
+        products = super().get(f'cpes/2.0/?keywordSearch={keyword}').json()["products"]
+        for product in products:
+            title = product["cpe"]["titles"][0]["title"]
+            cpe_name = product["cpe"]["cpeName"]
+            cpes_list.append(f'{title} ({cpe_name})')
+        return cpes_list
+    
+    @classmethod
+    def get_vulnerability_by_cpe(cls, cpe_name: str):
+        CVEs_list = []
+        vulnerabilities = super().get(f'cves/2.0?cpeName={cpe_name}').json()["vulnerabilities"]
+        for vulnerability in vulnerabilities:
+            cve_details = vulnerability["cve"]
+            CVEs_list.append(cls.__extract_returned_details_for_cve(cve_details))           
+        return CVEs_list
+    
+    @classmethod
+    def __extract_returned_details_for_cve(cls, cve_details: dict) -> dict:
+        cve_details_to_return = {}
+        cve_details_to_return["id"] = cve_details["id"]
+        cve_metrics = cve_details["metrics"]
+        cve_version = "cvssMetricV31" if "cvssMetricV31" in cve_metrics else "cvssMetricV2" # use older version if I have to
+        cve_details_to_return["cvss_score"] = cve_details["metrics"][cve_version][0]["cvssData"]["baseScore"]
+        cve_details_to_return["description"] = list(filter(lambda x: x["lang"] == "en", cve_details["descriptions"]))[0]["value"]
+        cve_details_to_return["relevantReferencesURLs"] = cls.__extract_exploit_github_references_urls(cve_details["references"])
+        return cve_details_to_return
+    
+    @classmethod
+    def __extract_exploit_github_references_urls(cls, references: list[dict]) -> list[str]:
+        return [cls.__slice_github_url(reference["url"]) for reference in references if "github" in reference["url"] and "Exploit" in reference["tags"]]
+
+    @classmethod
+    def __slice_github_url(cls, url: str) -> str: # so it contains the endpoint until the repo name without additionals
+        url_components = url[8:].split('/')[1:3]
+        url_components.insert(0, "repos")
+        return "/".join(url_components)
