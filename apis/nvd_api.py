@@ -27,7 +27,6 @@ class NVD_API(APITemplate):
         for vulnerability in vulnerabilities:
             cve_details = vulnerability["cve"]
             cve = CVE(**cls.__extract_returned_details_for_cve(cve_details))
-            print(cve)
             if (cve.severity >= min_severity):
                 CVEs_list.append(cve)
         return CVEs_list
@@ -51,7 +50,6 @@ class NVD_API(APITemplate):
         """ 
         for i in range(1, len(description) - 1):
             if description[i] == "." and not description[i - 1].isnumeric():
-                print(i)
                 return description[:i + 1]
         return description
     
@@ -65,17 +63,3 @@ class NVD_API(APITemplate):
         url_components = url[8:].split('/')[1:3]
         url_components.insert(0, "repos")
         return "/".join(url_components)
-    
-    @classmethod
-    def get_cve_by_id(cls, ide: str):
-        res = super().get(f'cves/2.0?cveId={ide}')
-        return list(filter(lambda x: x["lang"] == "en", res.json()['vulnerabilities'][0]['cve']['descriptions']))[0]["value"]
-
-
-# def func(description):
-#     for i in range(1, len(description) - 1):
-#             if description[i] == "." and not description[i - 1].isnumeric():
-#                 print(i)
-#                 return description[:i + 1]
-#     return description
-# print(func("Unspecified vulnerability in the benchmark reporting system in Google Web Toolkit (GWT) before 1.4.61 has unknown impact and attack vectors, possibly related to cross-site scripting (XSS)."))
