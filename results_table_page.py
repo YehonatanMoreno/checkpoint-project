@@ -51,7 +51,7 @@ class SearchResultsTablePage:
         tree_frame.grid_columnconfigure(0, weight=1)
 
         style = ttk.Style()
-        style.configure("Treeview", rowheight=120) 
+        style.configure("Treeview", rowheight=150) 
 
         self.tree = ttk.Treeview(tree_frame, show="headings", style="Treeview")
         columns_ids = ("CVE_ID", "Severity", "Description", "Relevant_Repositories") 

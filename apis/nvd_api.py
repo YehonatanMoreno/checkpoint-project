@@ -48,10 +48,10 @@ class NVD_API(APITemplate):
         """
         asuming a sentence is a non numeric string followed by a dot
         """ 
-        for i in range(1, len(description) - 1):
-            if description[i] == "." and not description[i - 1].isnumeric():
+        for i in range(1, len(description) - 2):
+            if description[i] == "." and not description[i - 1].isnumeric() and description[i + 1] == " ":
                 return description[:i + 1]
-        return description
+        return description[:min(len(description), 551)]
     
     @staticmethod
     def __extract_exploit_github_references_urls(references: List[dict]) -> List[str]:
