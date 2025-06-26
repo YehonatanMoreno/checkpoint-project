@@ -158,7 +158,7 @@ class SearchResultsPage:
 
 
         else:
-            no_results_label = ttk.Label(self.results_scroll_frame.viewport, text="No results found for this page.", font=("Arial", 12, "italic"))
+            no_results_label = ttk.Label(self.results_scroll_frame.viewport, text="No results found for this keyword.", font=("Arial", 12, "italic"))
             no_results_label.grid(row=0, column=0, pady=20)
             
         self._update_pagination_buttons()
@@ -229,7 +229,7 @@ class SearchResultsPage:
     def _search_for_CVEs(self, entered_number_str, result_text_context):
         try:
             entered_number = float(entered_number_str) if entered_number_str != "" else 0
-            CVEs = NVD_API.get_vulnerability_by_cpe_and_severity(result_text_context, entered_number)
+            CVEs = NVD_API.get_vulnerabilities_by_cpe_and_severity(result_text_context, entered_number)
             for cve in CVEs:
                 cve.set_relevant_repositories()
                             

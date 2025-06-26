@@ -1,7 +1,6 @@
+import textwrap
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
-import textwrap
 
 class ToolTip:
     def __init__(self, widget):
@@ -64,7 +63,7 @@ class SearchResultsTablePage:
         self.tree.heading("Relevant_Repositories", text="Relevant Repositories", anchor=tk.W)
 
         temp_label_cve_id = ttk.Label(self.top, text="CVE ID")
-        self.tree.column("CVE_ID", width=temp_label_cve_id.winfo_reqwidth() + 20, minwidth=100, stretch=tk.NO)
+        self.tree.column("CVE_ID", width=temp_label_cve_id.winfo_reqwidth() + 100, minwidth=100, stretch=tk.NO)
         temp_label_cve_id.destroy()
 
         temp_label_severity = ttk.Label(self.top, text="Severity")
